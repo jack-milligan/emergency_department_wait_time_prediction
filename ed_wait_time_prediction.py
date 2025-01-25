@@ -1,4 +1,5 @@
 # Import necessary libraries
+import os
 import pandas as pd  # For data manipulation and analysis
 import numpy as np  # For numerical computations
 from sklearn.model_selection import train_test_split  # To split data into training and testing sets
@@ -72,10 +73,16 @@ r2 = r2_score(y_test, y_pred)
 print(f"MAE: {mae:.2f}, R²: {r2:.2f}")
 
 # --- Step 7: Visualize the results ---
+# Create images folder if it doesn't exist
+os.makedirs("images", exist_ok=True)
 # Scatter plot of actual vs. predicted wait times
 plt.scatter(y_test, y_pred, alpha=0.5)  # Add transparency for better visibility of overlapping points
 plt.plot([y.min(), y.max()], [y.min(), y.max()], color='red')  # Line indicating perfect prediction
 plt.xlabel("Actual Wait Time")  # Label for x-axis
 plt.ylabel("Predicted Wait Time")  # Label for y-axis
 plt.title("Actual vs Predicted Wait Times")  # Title of the plot
+
+# Save the plot as an image
+image_path = "images/scatter_plot.png"
+plt.savefig(image_path, dpi=300, bbox_inches='tight')  # Save with high resolution
 plt.show()  # Display the plot
