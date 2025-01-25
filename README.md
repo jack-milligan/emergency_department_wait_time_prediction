@@ -35,7 +35,7 @@ This project uses **synthetic data** to simulate real-world ED scenarios:
 
 ## Key Results
 - **Mean Absolute Error (MAE)**: 6.33 minutes (average prediction error).
-- **R² Score**: 0.79 (model explains 82% of variability in wait times).
+- **R² Score**: 0.79 (model explains 79% of variability in wait times).
 - High patient-to-staff ratios and low acuity levels significantly influence wait times.
 
 ---
