@@ -1,88 +1,174 @@
-# Import necessary libraries
 import os
-import pandas as pd  # For data manipulation and analysis
-import numpy as np  # For numerical computations
-from sklearn.model_selection import train_test_split  # To split data into training and testing sets
-from sklearn.linear_model import LinearRegression  # For building a linear regression model
-from sklearn.metrics import mean_absolute_error, r2_score  # For model evaluation metrics
-import matplotlib.pyplot as plt  # For data visualization
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, r2_score
 
-# --- Step 1: Simulate synthetic data ---
-# Set a random seed for reproducibility of the simulation
-np.random.seed(42)
 
-# Define the number of samples (rows) in the dataset
-num_samples = 10000
+def simulate_synthetic_data(num_samples: int = 10000, random_seed: int = 42) -> pd.DataFrame:
+    """
+    Simulate synthetic emergency department (ED) data.
 
-# Create a dictionary to simulate emergency department (ED) data
-ed_data = {
-    'arrival_time': np.random.randint(0, 24, num_samples),  # Random hour of the day (0-23)
-    'acuity_level': np.random.choice(  # Random patient acuity level (severity of condition)
-        [1, 2, 3, 4, 5],  # Acuity levels (1 = critical, 5 = minor)
-        num_samples,
-        p=[0.1, 0.2, 0.3, 0.2, 0.2]  # Probability distribution for acuity levels
-    ),
-    'current_patient_volume': np.random.randint(10, 100, num_samples),  # Current number of patients in ED
-    'staff_on_duty': np.random.randint(5, 20, num_samples),  # Number of staff currently available
-    'wait_time': None  # Placeholder for wait time, which will be calculated later
-}
+    Parameters:
+        num_samples: Number of data samples to generate.
+        random_seed: Seed for reproducibility.
 
-# Convert the dictionary to a pandas DataFrame
-df = pd.DataFrame(ed_data)
+    Returns:
+        DataFrame with simulated ED data.
+    """
+    np.random.seed(random_seed)
 
-# --- Step 2: Simulate wait time based on given features ---
-# The formula for wait time combines various factors:
-# - Base wait time of 30 minutes.
-# - An increase proportional to patient volume and inversely proportional to staff availability.
-# - A decrease based on higher acuity levels (more severe cases get faster attention).
-# - Random noise is added to make the data more realistic.
+    data = {
+        'arrival_time': np.random.randint(0, 24, num_samples),  # Hour of arrival (0-23)
+        'acuity_level': np.random.choice(
+            [1, 2, 3, 4, 5],
+            num_samples,
+            p=[0.1, 0.2, 0.3, 0.2, 0.2]
+        ),
+        'current_patient_volume': np.random.randint(10, 100, num_samples),  # Current number of patients in ED
+        'staff_on_duty': np.random.randint(5, 20, num_samples)  # Number of staff available
+    }
 
-df['wait_time'] = (
-        30 + 5 * df['current_patient_volume'] / df['staff_on_duty']  # Higher patient volume increases wait time
-        - 10 * (1 / df['acuity_level'])  # Higher acuity levels (lower numbers) reduce wait time
-        + np.random.normal(0, 5, num_samples)  # Add random noise with mean 0 and standard deviation 5
-)
+    df = pd.DataFrame(data)
+    return df
 
-# --- Step 3: Split data into training and testing sets ---
-# Separate independent variables (features) and the dependent variable (target)
-X = df[['arrival_time', 'acuity_level', 'current_patient_volume', 'staff_on_duty']]  # Features
-y = df['wait_time']  # Target variable (wait time)
 
-# Split the dataset into training (80%) and testing (20%) sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+def simulate_wait_time(df: pd.DataFrame, random_seed: int = 42) -> pd.DataFrame:
+    """
+    Simulate wait time based on ED features and add a 'wait_time' column.
 
-# --- Step 4: Build a linear regression model ---
-# Initialize the Linear Regression model
-model = LinearRegression()
+    Wait time is modeled as:
+        30 + 5 * (patient_volume/staff_on_duty) - 10 * (1/acuity_level) + random noise
 
-# Train the model on the training data
-model.fit(X_train, y_train)
+    Parameters:
+        df: DataFrame containing ED features.
+        random_seed: Seed for noise reproducibility.
 
-# --- Step 5: Make predictions on the testing set ---
-# Use the trained model to predict wait times for the testing data
-y_pred = model.predict(X_test)
+    Returns:
+        DataFrame with the simulated 'wait_time' column.
+    """
+    num_samples = len(df)
+    np.random.seed(random_seed)
 
-# --- Step 6: Evaluate the model ---
-# Calculate the Mean Absolute Error (MAE) - average magnitude of prediction errors
-mae = mean_absolute_error(y_test, y_pred)
+    df['wait_time'] = (
+            30 +
+            5 * df['current_patient_volume'] / df['staff_on_duty'] -
+            10 * (1 / df['acuity_level']) +
+            np.random.normal(0, 5, num_samples)
+    )
+    return df
 
-# Calculate the R² score - proportion of variance explained by the model
-r2 = r2_score(y_test, y_pred)
 
-# Print the evaluation metrics
-print(f"MAE: {mae:.2f}, R²: {r2:.2f}")
+def split_dataset(df: pd.DataFrame, test_size: float = 0.2, random_state: int = 42):
+    """
+    Split the DataFrame into training and testing sets.
 
-# --- Step 7: Visualize the results ---
-# Create images folder if it doesn't exist
-os.makedirs("images", exist_ok=True)
-# Scatter plot of actual vs. predicted wait times
-plt.scatter(y_test, y_pred, alpha=0.5)  # Add transparency for better visibility of overlapping points
-plt.plot([y.min(), y.max()], [y.min(), y.max()], color='red')  # Line indicating perfect prediction
-plt.xlabel("Actual Wait Time")  # Label for x-axis
-plt.ylabel("Predicted Wait Time")  # Label for y-axis
-plt.title("Actual vs Predicted Wait Times")  # Title of the plot
+    Parameters:
+        df: DataFrame containing the data.
+        test_size: Proportion of the dataset to include in the test split.
+        random_state: Seed for reproducibility.
 
-# Save the plot as an image
-image_path = "images/scatter_plot.png"
-plt.savefig(image_path, dpi=300, bbox_inches='tight')  # Save with high resolution
-plt.show()  # Display the plot
+    Returns:
+        X_train, X_test, y_train, y_test
+    """
+    features = df[['arrival_time', 'acuity_level', 'current_patient_volume', 'staff_on_duty']]
+    target = df['wait_time']
+    return train_test_split(features, target, test_size=test_size, random_state=random_state)
+
+
+def build_and_train_model(X_train: pd.DataFrame, y_train: pd.Series) -> LinearRegression:
+    """
+    Build and train a linear regression model.
+
+    Parameters:
+        X_train: Training features.
+        y_train: Training target.
+
+    Returns:
+        Trained LinearRegression model.
+    """
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+    return model
+
+
+def evaluate_model(model: LinearRegression, X_test: pd.DataFrame, y_test: pd.Series) -> (np.ndarray, float, float):
+    """
+    Predict wait times and evaluate the model using MAE and R².
+
+    Parameters:
+        model: Trained LinearRegression model.
+        X_test: Testing features.
+        y_test: Testing target.
+
+    Returns:
+        y_pred: Predicted wait times.
+        mae: Mean Absolute Error.
+        r2: R² score.
+    """
+    y_pred = model.predict(X_test)
+    mae = mean_absolute_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+    return y_pred, mae, r2
+
+
+def print_evaluation(mae: float, r2: float) -> None:
+    """
+    Print evaluation metrics.
+
+    Parameters:
+        mae: Mean Absolute Error.
+        r2: R² score.
+    """
+    print(f"MAE: {mae:.2f}, R²: {r2:.2f}")
+
+
+def save_and_show_plot(y_test: pd.Series, y_pred: np.ndarray, image_path: str = "images/scatter_plot.png") -> None:
+    """
+    Create a scatter plot of actual vs. predicted wait times, save it, and display the plot.
+
+    Parameters:
+        y_test: Actual wait times.
+        y_pred: Predicted wait times.
+        image_path: File path to save the plot.
+    """
+    # Ensure the images folder exists
+    os.makedirs(os.path.dirname(image_path), exist_ok=True)
+
+    plt.figure(figsize=(10, 6))
+    plt.scatter(y_test, y_pred, alpha=0.5, label='Predictions')
+    plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], color='red', label='Perfect Prediction')
+    plt.xlabel("Actual Wait Time")
+    plt.ylabel("Predicted Wait Time")
+    plt.title("Actual vs Predicted Wait Times")
+    plt.legend()
+    plt.savefig(image_path, dpi=300, bbox_inches='tight')
+    plt.show()
+    plt.close()
+
+
+def main() -> None:
+    # Step 1: Simulate synthetic ED data
+    df = simulate_synthetic_data()
+
+    # Step 2: Simulate wait times and add to the DataFrame
+    df = simulate_wait_time(df)
+
+    # Step 3: Split the data into training and testing sets
+    X_train, X_test, y_train, y_test = split_dataset(df)
+
+    # Step 4: Build and train the linear regression model
+    model = build_and_train_model(X_train, y_train)
+
+    # Step 5: Make predictions and evaluate the model
+    y_pred, mae, r2 = evaluate_model(model, X_test, y_test)
+    print_evaluation(mae, r2)
+
+    # Step 6: Visualize the actual vs. predicted wait times
+    save_and_show_plot(y_test, y_pred)
+
+
+if __name__ == "__main__":
+    main()
